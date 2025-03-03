@@ -1,0 +1,91 @@
+import { useState, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Timer } from "lucide-react";
+
+export default function FocusFlow() {
+  const [timeLeft, setTimeLeft] = useState(25 * 60);
+  const [isRunning, setIsRunning] = useState(false);
+  const [sessionType, setSessionType] = useState("Focus");
+  const [focusSessionsCompleted, setFocusSessionsCompleted] = useState(0);
+  const [breakSessionsCompleted, setBreakSessionsCompleted] = useState(0);
+
+  const audioRef = useRef(null); // Ref to manage the sound notification
+
+  useEffect(() => {
+    let timer;
+    if (isRunning && timeLeft > 0) {
+      // Decrement every second
+      timer = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    } else if (timeLeft === 0) {
+      // When time runs out, switch session and play sound
+      switchSession();
+      playSound();
+    }
+
+    // Cleanup interval when timer is stopped
+    return () => clearInterval(timer);
+  }, [isRunning, timeLeft]);
+
+  const playSound = () => {
+    if (audioRef.current) {
+      audioRef.current.play();
+    }
+  };
+
+  const switchSession = () => {
+    if (sessionType === "Focus") {
+      setSessionType("Break");
+      setTimeLeft(5 * 60); // 5 minutes break time
+      setFocusSessionsCompleted((prev) => prev + 1); // Increment focus session count
+    } else {
+      setSessionType("Focus");
+      setTimeLeft(25 * 60); // 25 minutes focus time
+      setBreakSessionsCompleted((prev) => prev + 1); // Increment break session count
+    }
+  };
+
+  const resetTimer = () => {
+    setTimeLeft(25 * 60);
+    setSessionType("Focus");
+    setIsRunning(false);
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-4">
+      <Card className="w-full max-w-md text-center p-4 bg-gray-800">
+        <CardContent>
+          <h2 className="text-xl font-bold mb-2">{sessionType} Session</h2>
+          <Timer className="w-12 h-12 mx-auto text-blue-400" />
+          <p className="text-3xl font-mono my-4">
+            {Math.floor(timeLeft / 60)}:{("0" + (timeLeft % 60)).slice(-2)}
+          </p>
+
+          <Progress value={(timeLeft / (sessionType === "Focus" ? 1500 : 300)) * 100} />
+
+          <div className="my-4 text-lg">
+            <p>Focus Sessions Completed: {focusSessionsCompleted}</p>
+            <p>Break Sessions Completed: {breakSessionsCompleted}</p>
+          </div>
+
+          <div className="flex justify-center gap-4 mt-4">
+            <Button onClick={() => setIsRunning(!isRunning)}>
+              {isRunning ? "Pause" : "Start"}
+            </Button>
+            <Button variant="outline" onClick={switchSession}>
+              Skip
+            </Button>
+            <Button variant="outline" onClick={resetTimer}>
+              Reset
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <audio ref={audioRef} src="/notification-sound.mp3" />
+    </div>
+  );
+}
